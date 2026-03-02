@@ -23,17 +23,17 @@ from pydantic import BaseModel, ConfigDict
 from . import payment as payment_1
 from .types import buyer as buyer_1
 from .types import context as context_1
-from .types import create_line_item_request
+from .types import line_item_create_request
 
 
-class CreateCheckoutRequest(BaseModel):
+class CheckoutCreateRequest(BaseModel):
   """Base checkout schema. Extensions compose onto this using allOf.
   """
 
   model_config = ConfigDict(
     extra="allow",
   )
-  line_items: list[create_line_item_request.CreateLineItemRequest]
+  line_items: list[line_item_create_request.LineItemCreateRequest]
   """
     List of line items being checked out.
     """

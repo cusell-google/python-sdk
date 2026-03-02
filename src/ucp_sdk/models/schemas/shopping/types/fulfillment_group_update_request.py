@@ -20,14 +20,9 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from . import payment as payment_1
-from .types import buyer as buyer_1
-from .types import context as context_1
-from .types import update_line_item_request
 
-
-class UpdateCheckoutRequest(BaseModel):
-  """Base checkout schema. Extensions compose onto this using allOf.
+class FulfillmentGroupUpdateRequest(BaseModel):
+  """A merchant-generated package/group of line items with fulfillment options.
   """
 
   model_config = ConfigDict(
@@ -35,15 +30,9 @@ class UpdateCheckoutRequest(BaseModel):
   )
   id: str
   """
-    Unique identifier of the checkout session.
+    Group identifier for referencing merchant-generated groups in updates.
     """
-  line_items: list[update_line_item_request.UpdateLineItemRequest]
+  selected_option_id: str | None = None
   """
-    List of line items being checked out.
+    ID of the selected fulfillment option for this group.
     """
-  buyer: buyer_1.Buyer | None = None
-  """
-    Representation of the buyer.
-    """
-  context: context_1.Context | None = None
-  payment: payment_1.Payment | None = None

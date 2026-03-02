@@ -53,7 +53,7 @@ def process_file(schema_file, all_variant_needs):
 
 def get_variant_filename(base_path, op):
   p = Path(base_path)
-  return p.parent / f"{op}_{p.stem}_request.json"
+  return p.parent / f"{p.stem}_{op}_request.json"
 
 
 def generate_variants(schema_file, schema, ops, all_variant_needs):
@@ -63,7 +63,7 @@ def generate_variants(schema_file, schema, ops, all_variant_needs):
 
     # Update title and id
     base_title = schema.get("title", schema_file_path.stem)
-    variant_schema["title"] = f"{op.capitalize()} {base_title} Request"
+    variant_schema["title"] = f"{base_title} {op.capitalize()} Request"
 
     # Update $id if present
     if "$id" in variant_schema:
@@ -74,7 +74,7 @@ def generate_variants(schema_file, schema, ops, all_variant_needs):
         if "." in old_id_filename:
           stem = old_id_filename.split(".")[0]
           ext = old_id_filename.split(".")[-1]
-          new_id_filename = f"{op}_{stem}_request.{ext}"
+          new_id_filename = f"{stem}_{op}_request.{ext}"
           variant_schema["$id"] = "/".join(
             old_id_parts[:-1] + [new_id_filename]
           )
@@ -126,7 +126,7 @@ def generate_variants(schema_file, schema, ops, all_variant_needs):
                   str(target_base_abs) in all_variant_needs
                   and op in all_variant_needs[str(target_base_abs)]
                 ):
-                  variant_ref_filename = f"{op}_{ref_path.stem}_request.json"
+                  variant_ref_filename = f"{ref_path.stem}_{op}_request.json"
                   obj["$ref"] = str(ref_path.parent / variant_ref_filename)
             for k, v in obj.items():
               update_refs(v)

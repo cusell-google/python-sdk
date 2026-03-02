@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from . import item as item_1
 
 
-class CreateLineItemRequest(BaseModel):
+class LineItemCreateRequest(BaseModel):
   """Line item object. Expected to use the currency of the parent object.
   """
 

@@ -20,11 +20,14 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
-from . import fulfillment_destination, update_fulfillment_group_request
+from . import payment as payment_1
+from .types import buyer as buyer_1
+from .types import context as context_1
+from .types import line_item_update_request
 
 
-class UpdateFulfillmentMethodRequest(BaseModel):
-  """A fulfillment method (shipping or pickup) with destinations and groups.
+class CheckoutUpdateRequest(BaseModel):
+  """Base checkout schema. Extensions compose onto this using allOf.
   """
 
   model_config = ConfigDict(
@@ -32,25 +35,15 @@ class UpdateFulfillmentMethodRequest(BaseModel):
   )
   id: str
   """
-    Unique fulfillment method identifier.
+    Unique identifier of the checkout session.
     """
-  line_item_ids: list[str]
+  line_items: list[line_item_update_request.LineItemUpdateRequest]
   """
-    Line item IDs fulfilled via this method.
+    List of line items being checked out.
     """
-  destinations: list[fulfillment_destination.FulfillmentDestination] | None = (
-    None
-  )
+  buyer: buyer_1.Buyer | None = None
   """
-    Available destinations. For shipping: addresses. For pickup: retail locations.
+    Representation of the buyer.
     """
-  selected_destination_id: str | None = None
-  """
-    ID of the selected destination.
-    """
-  groups: (
-    list[update_fulfillment_group_request.UpdateFulfillmentGroupRequest] | None
-  ) = None
-  """
-    Fulfillment groups for selecting options. Agent sets selected_option_id on groups to choose shipping method.
-    """
+  context: context_1.Context | None = None
+  payment: payment_1.Payment | None = None

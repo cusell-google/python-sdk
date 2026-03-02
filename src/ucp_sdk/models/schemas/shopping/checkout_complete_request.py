@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict
 from . import payment as payment_1
 
 
-class CompleteCheckoutRequest(BaseModel):
+class CheckoutCompleteRequest(BaseModel):
   """Base checkout schema. Extensions compose onto this using allOf.
   """
 

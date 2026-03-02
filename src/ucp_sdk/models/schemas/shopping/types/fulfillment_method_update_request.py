@@ -20,9 +20,11 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict
 
+from . import fulfillment_destination, fulfillment_group_update_request
 
-class UpdateFulfillmentGroupRequest(BaseModel):
-  """A merchant-generated package/group of line items with fulfillment options.
+
+class FulfillmentMethodUpdateRequest(BaseModel):
+  """A fulfillment method (shipping or pickup) with destinations and groups.
   """
 
   model_config = ConfigDict(
@@ -30,9 +32,25 @@ class UpdateFulfillmentGroupRequest(BaseModel):
   )
   id: str
   """
-    Group identifier for referencing merchant-generated groups in updates.
+    Unique fulfillment method identifier.
     """
-  selected_option_id: str | None = None
+  line_item_ids: list[str]
   """
-    ID of the selected fulfillment option for this group.
+    Line item IDs fulfilled via this method.
+    """
+  destinations: list[fulfillment_destination.FulfillmentDestination] | None = (
+    None
+  )
+  """
+    Available destinations. For shipping: addresses. For pickup: retail locations.
+    """
+  selected_destination_id: str | None = None
+  """
+    ID of the selected destination.
+    """
+  groups: (
+    list[fulfillment_group_update_request.FulfillmentGroupUpdateRequest] | None
+  ) = None
+  """
+    Fulfillment groups for selecting options. Agent sets selected_option_id on groups to choose shipping method.
     """

@@ -18,25 +18,17 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
-
-from . import item as item_1
+from pydantic import BaseModel, ConfigDict
 
 
-class UpdateLineItemRequest(BaseModel):
-  """Line item object. Expected to use the currency of the parent object.
+class FulfillmentGroupCreateRequest(BaseModel):
+  """A merchant-generated package/group of line items with fulfillment options.
   """
 
   model_config = ConfigDict(
     extra="allow",
   )
-  id: str | None = None
-  item: item_1.Item
-  quantity: int = Field(..., ge=1)
+  selected_option_id: str | None = None
   """
-    Quantity of the item being purchased.
-    """
-  parent_id: str | None = None
-  """
-    Parent line item identifier for any nested structures.
+    ID of the selected fulfillment option for this group.
     """
