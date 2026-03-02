@@ -368,6 +368,8 @@ def preprocess_schema_file(
             schema_str = schema_str.replace(
                 f'"{ref_file}', f'"file://{ref_path}'
             )
+            if sys.platform == "win32":
+                ref_path = f'/{ref_path.as_posix()}'
 
         schema = json.loads(schema_str)
 
