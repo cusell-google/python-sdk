@@ -3,8 +3,20 @@ name = "ucp-sdk"
 version = "0.1.0"
 description = "UCP Python SDK"
 readme = "README.md"
+license = {file = "LICENSE"}
 authors = [
     { name = "Florin Iucha", email = "fiucha@google.com" }
+]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 requires-python = ">=3.10"
 dependencies = [
