@@ -75,7 +75,7 @@ uv run \
 
 echo "Formatting generated models..."
 uv run ruff format
-uv run ruff check --fix "$OUTPUT_DIR" 2>&1 | grep -E "^(All checks passed|Fixed|Found)" || echo "Formatting complete"
+uv run ruff check --fix "$OUTPUT_DIR"
 
 
 echo "Done. Models generated in $OUTPUT_DIR"

@@ -34,11 +34,11 @@ Python.
 For now, you can install the SDK using the following commands:
 
 ```bash
-# Create a directory for the SDK
-mkdir sdk
-
 # Clone the repository
 git clone https://github.com/Universal-Commerce-Protocol/python-sdk.git
+
+# Navigate to the directory
+cd python-sdk
 
 # Install dependencies
 uv sync
