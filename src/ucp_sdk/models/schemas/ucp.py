@@ -75,48 +75,6 @@ class Entity(BaseModel):
     """
 
 
-class PlatformSchema(BaseModel):
-    """
-    Full UCP metadata for platform-level configuration. Hosted at a URI advertised by the platform in request headers.
-    """
-
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    version: Version
-    services: Any
-    capabilities: Any | None = None
-    payment_handlers: Any
-
-
-class BusinessSchema(BaseModel):
-    """
-    UCP metadata for business/merchant-level configuration. Subset of platform schema with business-specific settings.
-    """
-
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    version: Version
-    services: Any
-    capabilities: Any | None = None
-    payment_handlers: Any
-
-
-class ResponseCheckoutSchema(BaseModel):
-    """
-    UCP metadata for checkout responses.
-    """
-
-    model_config = ConfigDict(
-        extra="allow",
-    )
-    version: Version
-    services: Any | None = None
-    capabilities: Any | None = None
-    payment_handlers: Any
-
-
 class ResponseCartSchema(RootModel[Any]):
     model_config = ConfigDict(
         frozen=True,
@@ -149,7 +107,87 @@ class Base(BaseModel):
     """
 
 
-class ResponseOrderSchema(BaseModel):
+class PlatformSchema(Base):
+    """
+    Full UCP metadata for platform-level configuration. Hosted at a URI advertised by the platform in request headers.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    services: dict[ReverseDomainName, list[service.PlatformSchema3]]
+    """
+    Service registry keyed by reverse-domain name.
+    """
+    capabilities: (
+        dict[ReverseDomainName, list[capability.PlatformSchema]] | None
+    ) = None
+    """
+    Capability registry keyed by reverse-domain name.
+    """
+    payment_handlers: dict[
+        ReverseDomainName, list[payment_handler.PlatformSchema]
+    ]
+    """
+    Payment handler registry keyed by reverse-domain name.
+    """
+
+
+class BusinessSchema(Base):
+    """
+    UCP metadata for business/merchant-level configuration. Subset of platform schema with business-specific settings.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    services: dict[ReverseDomainName, list[service.BusinessSchema2]]
+    """
+    Service registry keyed by reverse-domain name.
+    """
+    capabilities: (
+        dict[ReverseDomainName, list[capability.BusinessSchema]] | None
+    ) = None
+    """
+    Capability registry keyed by reverse-domain name.
+    """
+    payment_handlers: dict[
+        ReverseDomainName, list[payment_handler.BusinessSchema]
+    ]
+    """
+    Payment handler registry keyed by reverse-domain name.
+    """
+
+
+class ResponseCheckoutSchema(Base):
+    """
+    UCP metadata for checkout responses.
+    """
+
+    model_config = ConfigDict(
+        extra="allow",
+    )
+    services: dict[ReverseDomainName, list[service.ResponseSchema2]] | None = (
+        None
+    )
+    """
+    Service registry keyed by reverse-domain name.
+    """
+    capabilities: (
+        dict[ReverseDomainName, list[capability.ResponseSchema]] | None
+    ) = None
+    """
+    Capability registry keyed by reverse-domain name.
+    """
+    payment_handlers: dict[
+        ReverseDomainName, list[payment_handler.ResponseSchema]
+    ]
+    """
+    Payment handler registry keyed by reverse-domain name.
+    """
+
+
+class ResponseOrderSchema(Base):
     """
     UCP metadata for order responses. No payment handlers needed post-purchase.
     """
@@ -157,17 +195,11 @@ class ResponseOrderSchema(BaseModel):
     model_config = ConfigDict(
         extra="allow",
     )
-    version: Version
-    services: dict[ReverseDomainName, list[service.Base]] | None = None
-    """
-    Service registry keyed by reverse-domain name.
-    """
-    capabilities: Any | None = None
-    payment_handlers: (
-        dict[ReverseDomainName, list[payment_handler.Base]] | None
+    capabilities: (
+        dict[ReverseDomainName, list[capability.ResponseSchema]] | None
     ) = None
     """
-    Payment handler registry keyed by reverse-domain name.
+    Capability registry keyed by reverse-domain name.
     """
 
 

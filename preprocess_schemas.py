@@ -89,6 +89,70 @@ def resolve_local_ref(ref, root):
 # --- Schema Normalization and Flattening ---
 
 
+def _process_all_of_item(item, node, root, state):
+    """Processes a single allOf item and updates the shared merge state."""
+    # Resolve local references (internal inheritance) before merging
+    if isinstance(item, dict) and "$ref" in item:
+        resolved = resolve_local_ref(item["$ref"], root)
+        if resolved:
+            item = copy.deepcopy(resolved)
+        else:
+            # Keep external refs; we'll handle them in variant generation if needed
+            state["remaining_refs"].append(item)
+            return
+
+    if not isinstance(item, dict):
+        return
+
+    # Extract polymorphic branches (anyOf, oneOf) to keep the node flat
+    for poly_key in ["anyOf", "oneOf"]:
+        if poly_key in item:
+            state["poly_branches"].setdefault(poly_key, []).extend(
+                item.pop(poly_key)
+            )
+
+    # Merge core property definitions and requirements
+    if "properties" in item:
+        state["merged_properties"].update(item["properties"])
+    if "required" in item:
+        for req in item["required"]:
+            if req not in state["merged_required"]:
+                state["merged_required"].append(req)
+
+    # Carry over generic metadata (title, description, etc.) if not defined in the base
+    reserved_keys = {
+        "properties",
+        "required",
+        "allOf",
+        "$ref",
+        "anyOf",
+        "oneOf",
+    }
+    for k, v in item.items():
+        if k not in reserved_keys and k not in node:
+            node[k] = v
+
+
+def _apply_merged_state(node, state):
+    """Applies accumulated properties and branches to the node."""
+    if state["merged_properties"]:
+        node.setdefault("properties", {}).update(state["merged_properties"])
+
+    if state["merged_required"]:
+        existing = node.setdefault("required", [])
+        for r in state["merged_required"]:
+            if r not in existing:
+                existing.append(r)
+
+    # Re-insert any combined polymorphic branches
+    for k, branches in state["poly_branches"].items():
+        node.setdefault(k, []).extend(branches)
+
+    # If some refs couldn't be resolved locally, put them back into a slim allOf
+    if state["remaining_refs"]:
+        node["allOf"] = state["remaining_refs"]
+
+
 def merge_all_of_to_node(node, root):
     """
     Merges 'allOf' components into the node itself.
@@ -101,73 +165,17 @@ def merge_all_of_to_node(node, root):
         return
 
     all_of_sources = node.pop("allOf")
-    merged_properties = {}
-    merged_required = []
-    poly_branches = {}
-    remaining_refs = []
+    state = {
+        "merged_properties": {},
+        "merged_required": [],
+        "poly_branches": {},
+        "remaining_refs": [],
+    }
 
     for item in all_of_sources:
-        # Resolve local references (internal inheritance) before merging
-        if isinstance(item, dict) and "$ref" in item:
-            resolved = resolve_local_ref(item["$ref"], root)
-            if resolved:
-                item = copy.deepcopy(resolved)
-            else:
-                # Keep external refs; we'll handle them in variant generation if needed
-                remaining_refs.append(item)
-                continue
+        _process_all_of_item(item, node, root, state)
 
-        if not isinstance(item, dict):
-            continue
-
-        # Extract polymorphic branches (anyOf, oneOf) to keep the node flat
-        for poly_key in ["anyOf", "oneOf"]:
-            if poly_key in item:
-                poly_branches.setdefault(poly_key, []).extend(
-                    item.pop(poly_key)
-                )
-
-        # Merge core property definitions and requirements
-        if "properties" in item:
-            merged_properties.update(item["properties"])
-        if "required" in item:
-            for req in item["required"]:
-                if req not in merged_required:
-                    merged_required.append(req)
-
-        # Carry over generic metadata (title, description, etc.) if not defined in the base
-        for k, v in item.items():
-            if (
-                k
-                not in [
-                    "properties",
-                    "required",
-                    "allOf",
-                    "$ref",
-                    "anyOf",
-                    "oneOf",
-                ]
-                and k not in node
-            ):
-                node[k] = v
-
-    # Apply merged state back to the primary node
-    if merged_properties:
-        node.setdefault("properties", {}).update(merged_properties)
-
-    if merged_required:
-        existing = node.setdefault("required", [])
-        for r in merged_required:
-            if r not in existing:
-                existing.append(r)
-
-    # Re-insert any combined polymorphic branches
-    for k, branches in poly_branches.items():
-        node.setdefault(k, []).extend(branches)
-
-    # If some refs couldn't be resolved locally, put them back into a slim allOf
-    if remaining_refs:
-        node["allOf"] = remaining_refs
+    _apply_merged_state(node, state)
 
 
 def distribute_properties_to_branches(node):
@@ -220,7 +228,7 @@ def flatten_entity_reference(node, entity_definition):
     Replaces $ref to 'ucp.json#/$defs/entity' with actual logic.
     This effectively converts 'Entity' inheritance into direct 'BaseModel' fields.
     """
-    if "allOf" not in node or not entity_definition:
+    if "allOf" not in node:
         return
 
     filtered_all_of = []
@@ -229,6 +237,10 @@ def flatten_entity_reference(node, entity_definition):
             "$ref", ""
         ).endswith("ucp.json#/$defs/entity")
         if is_entity_ref:
+            if not entity_definition:
+                raise ValueError(
+                    "Node requires 'ucp.json#/$defs/entity' but no entity definition was provided."
+                )
             # Inline a copy; strip name to prevent unwanted class generation for the base
             e_copy = copy.deepcopy(entity_definition)
             e_copy.pop("title", None)
@@ -342,34 +354,43 @@ def rewrite_refs_to_variants(root, op, file_path, variant_needs):
                     )
 
 
-def generate_variants(path, schema, ops, all_variant_needs):
+def _create_single_variant(
+    schema, op, stem, file_path, global_variant_requirements
+):
+    """Creates a modified copy of the schema tailored for a specific operation."""
+    variant = copy.deepcopy(schema)
+    update_variant_identity(variant, op, stem)
+
+    new_props = {}
+    new_required = []
+    base_req = schema.get("required", [])
+
+    for name, data in schema.get("properties", {}).items():
+        include, required = eval_prop_inclusion(name, data, op, base_req)
+        if include:
+            prop_data = copy.deepcopy(data)
+            if isinstance(prop_data, dict):
+                prop_data.pop("ucp_request", None)
+                rewrite_refs_to_variants(
+                    prop_data, op, file_path, global_variant_requirements
+                )
+
+            new_props[name] = prop_data
+            if required:
+                new_required.append(name)
+
+    variant["properties"] = new_props
+    variant["required"] = new_required
+    return variant
+
+
+def generate_variants(path, schema, ops, global_variant_requirements):
     """Creates specific JSON files (create/update/complete) based on ucp_request markers."""
     file_path = Path(path)
     for op in ops:
-        variant = copy.deepcopy(schema)
-        update_variant_identity(variant, op, file_path.stem)
-
-        new_props = {}
-        new_required = []
-        base_req = schema.get("required", [])
-
-        for name, data in schema.get("properties", {}).items():
-            include, required = eval_prop_inclusion(name, data, op, base_req)
-            if include:
-                prop_data = copy.deepcopy(data)
-                if isinstance(prop_data, dict):
-                    prop_data.pop("ucp_request", None)
-                    rewrite_refs_to_variants(
-                        prop_data, op, file_path, all_variant_needs
-                    )
-
-                new_props[name] = prop_data
-                if required:
-                    new_required.append(name)
-
-        variant["properties"] = new_props
-        variant["required"] = new_required
-
+        variant = _create_single_variant(
+            schema, op, file_path.stem, file_path, global_variant_requirements
+        )
         out = file_path.parent / f"{file_path.stem}_{op}_request.json"
         save_json(variant, out)
         print(f"Generated variant: {out}")
@@ -378,44 +399,38 @@ def generate_variants(path, schema, ops, all_variant_needs):
 # --- Global Normalization ---
 
 
-def fix_metadata_structure(schema_dir):
+def normalize_metadata_schemas(schemas, target_dir):
     """
     Ensures ucp.json has a root union and other files point to it generically.
     This enables a unified 'ucp' metadata property across the entire SDK.
+    Returns structurally corrected schemas.
     """
-    ucp_path = schema_dir / "ucp.json"
-    if not ucp_path.exists():
-        return
-
-    ucp = load_json(ucp_path)
-    ucp["oneOf"] = [
-        {"$ref": f"#/$defs/{d}"}
-        for d in [
-            "platform_schema",
-            "business_schema",
-            "response_checkout_schema",
-            "response_order_schema",
-            "response_cart_schema",
+    ucp_path = str((target_dir / "ucp.json").resolve())
+    if ucp_path in schemas:
+        ucp = schemas[ucp_path]
+        ucp["oneOf"] = [
+            {"$ref": f"#/$defs/{d}"}
+            for d in [
+                "platform_schema",
+                "business_schema",
+                "response_checkout_schema",
+                "response_order_schema",
+                "response_cart_schema",
+            ]
         ]
-    ]
-    save_json(ucp, ucp_path)
 
-    for f in schema_dir.rglob("*.json"):
-        if f.name == "ucp.json" or "_request.json" in f.name:
+    for p_abs, s in schemas.items():
+        if "ucp.json" in p_abs or "_request.json" in p_abs:
             continue
-        try:
-            s = load_json(f)
-            # Find the 'ucp' property and point it to the ucp.json root
-            ucp_prop = s.get("properties", {}).get("ucp", {})
-            if (
-                isinstance(ucp_prop, dict)
-                and "$ref" in ucp_prop
-                and "ucp.json" in ucp_prop["$ref"]
-            ):
-                ucp_prop["$ref"] = ucp_prop["$ref"].split("#")[0]
-                save_json(s, f)
-        except:
-            continue
+        # Find the 'ucp' property and point it to the ucp.json root
+        ucp_prop = s.get("properties", {}).get("ucp", {})
+        if (
+            isinstance(ucp_prop, dict)
+            and "$ref" in ucp_prop
+            and "ucp.json" in ucp_prop["$ref"]
+        ):
+            ucp_prop["$ref"] = ucp_prop["$ref"].split("#")[0]
+    return schemas
 
 
 # --- Dependency Management ---
@@ -476,8 +491,8 @@ def propagate_needs_transitive(variant_needs, schema_refs, schemas):
 def main():
     """
     Orchestrates the schema preprocessing pipeline:
-    1. metadata normalization: unifies ucp properties
-    2. Pass 1: Local flattening (allOf) and discovery of needed variants
+    1. Pass 1: Local flattening (allOf) and discovery of needed variants
+    2. metadata normalization: unifies ucp properties
     3. Pass 2: Transitive propagation (ensuring matched variants for linked schemas)
     4. Pass 3: Variant file generation (*_request.json)
     """
@@ -488,38 +503,46 @@ def main():
         print(f"Error: Directory {target_dir} not found.")
         return
 
-    # Phase 0: Ensure the metadata 'ucp' property is consistent across all files
-    fix_metadata_structure(target_dir)
-
-    # Load base entity definition for inlining (flattening inheritance)
-    ucp_path = target_dir / "ucp.json"
-    entity_def = (
-        load_json(ucp_path).get("$defs", {}).get("entity", {})
-        if ucp_path.exists()
-        else {}
-    )
-
     schemas, schema_refs, variant_needs = {}, {}, {}
-
-    # Pass 1: Load every schema, flatten it locally, and find explicit variant markers
     for f in target_dir.rglob("*.json"):
         if "_request.json" in f.name:
             continue
         try:
             s = load_json(f)
-            preprocess_full_schema(s, entity_def)
-            save_json(s, f)  # Write back the flattened core schema
-
             p_abs = str(f.resolve())
             schemas[p_abs] = s
-            schema_refs[p_abs] = extract_external_refs(s, f)
-
-            # Check if this schema explicitly asks for variants via 'ucp_request' markers
-            ops = get_required_ops(s)
-            if ops:
-                variant_needs[p_abs] = ops
         except Exception as e:
-            print(f"Failed to process {f}: {e}")
+            print(f"Failed to load {f}: {e}")
+
+    # Phase 0: Ensure the metadata 'ucp' property is consistent across all files
+    normalize_metadata_schemas(schemas, target_dir)
+
+    ucp_path = str((target_dir / "ucp.json").resolve())
+    entity_def = {}
+    if ucp_path in schemas:
+        entity_def = schemas[ucp_path].get("$defs", {}).get("entity", {})
+    if not entity_def:
+        raise ValueError(
+            "Entity definition not found! 'ucp.json' must define '$defs.entity'"
+        )
+
+    # Pass 1: Local flattening and find explicit variant markers
+    for p_abs, s in schemas.items():
+        if "ucp.json" in p_abs or "_request.json" in p_abs:
+            continue
+        preprocess_full_schema(s, entity_def)
+        # Write back the flattened core schema
+        save_json(s, Path(p_abs))
+
+        schema_refs[p_abs] = extract_external_refs(s, Path(p_abs))
+
+        # Check if this schema explicitly asks for variants via 'ucp_request' markers
+        ops = get_required_ops(s)
+        if ops:
+            variant_needs[p_abs] = ops
+
+    if ucp_path in schemas:
+        save_json(schemas[ucp_path], Path(ucp_path))
 
     # Pass 2: Propagate the need for variants down the dependency tree
     propagate_needs_transitive(variant_needs, schema_refs, schemas)
