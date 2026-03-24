@@ -62,9 +62,11 @@ uv sync
 ./generate_models.sh <version>
 ```
 
-Where `<version>` is the version of the UCP specification to use (for example, "2026-01-23"). 
+Where `<version>` is the version of the UCP specification to use (for example,
+"2026-01-23").
 
-If no version is specified, the `main` branch of the [UCP repo](https://github.com/Universal-Commerce-Protocol/ucp) will be used.
+If no version is specified, the `main` branch of the
+[UCP repo](https://github.com/Universal-Commerce-Protocol/ucp) will be used.
 
 The generated code is automatically formatted using `ruff`.
 

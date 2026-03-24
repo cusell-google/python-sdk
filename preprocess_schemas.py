@@ -22,7 +22,7 @@ import sys
 
 def load_json(path):
     """Loads JSON data from a file."""
-    with open(path, "r") as f:
+    with open(path) as f:
         return json.load(f)
 
 
@@ -393,7 +393,7 @@ def generate_variants(path, schema, ops, global_variant_requirements):
         )
         out = file_path.parent / f"{file_path.stem}_{op}_request.json"
         save_json(variant, out)
-        print(f"Generated variant: {out}")
+        sys.stdout.write(f"Generated variant: {out}\n")
 
 
 # --- Global Normalization ---
@@ -500,7 +500,7 @@ def main():
         sys.argv[1] if len(sys.argv) > 1 else "ucp/source/schemas"
     )
     if not target_dir.exists():
-        print(f"Error: Directory {target_dir} not found.")
+        sys.stderr.write(f"Error: Directory {target_dir} not found.\n")
         return
 
     schemas, schema_refs, variant_needs = {}, {}, {}
@@ -512,7 +512,7 @@ def main():
             p_abs = str(f.resolve())
             schemas[p_abs] = s
         except Exception as e:
-            print(f"Failed to load {f}: {e}")
+            sys.stderr.write(f"Failed to load {f}: {e}\n")
 
     # Phase 0: Ensure the metadata 'ucp' property is consistent across all files
     normalize_metadata_schemas(schemas, target_dir)
