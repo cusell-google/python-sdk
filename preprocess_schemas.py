@@ -22,13 +22,13 @@ import sys
 
 def load_json(path):
     """Loads JSON data from a file."""
-    with open(path, "r", encoding="utf-8") as f:
+    with Path(path).open(encoding="utf-8") as f:
         return json.load(f)
 
 
 def save_json(data, path):
     """Saves data to a JSON file with standard indentation."""
-    with open(path, "w", encoding="utf-8") as f:
+    with Path(path).open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2)
 
 
