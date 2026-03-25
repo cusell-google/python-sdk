@@ -1,6 +1,5 @@
-set shell := ["bash", "-c"]
-
-export PATH := "$HOME/.local/bin:$PATH"
+set shell := ["/bin/bash", "-c"]
+export PATH := env_var('HOME') + '/.local/bin:' + env_var('PATH')
 
 # Default action is to list available commands
 default:
