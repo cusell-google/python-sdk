@@ -40,35 +40,47 @@ git clone https://github.com/Universal-Commerce-Protocol/python-sdk.git
 # Navigate to the directory
 cd python-sdk
 
-# Install dependencies
-uv sync
+# Install dependencies (requires uv and just)
+just install
 ```
 
 ## Development
 
 ### Prerequisites
 
-This project uses `uv` for dependency management.
+This project uses `uv` for dependency management, and `just` as a command runner.
+Ensure you have high-level tools available to build the developer environment smoothly:
+
+- [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
+- [Install just](https://just.systems/man/en/)
+
+You can see all available developer commands by running:
+
+```bash
+just
+```
 
 ### Generating Pydantic Models
 
 The models are automatically generated from the JSON schemas in the UCP
 Specification.
 
-To regenerate the models:
+To regenerate the models to the latest schema:
 
 ```bash
-uv sync
-./generate_models.sh <version>
+```bash
+just generate
 ```
 
-Where `<version>` is the version of the UCP specification to use (for example,
-"2026-01-23").
+To regenerate the models targeting a specific schema version (for example, "2026-01-23"):
 
+```bash
+just generate 2026-01-23
+```
 If no version is specified, the `main` branch of the
 [UCP repo](https://github.com/Universal-Commerce-Protocol/ucp) will be used.
 
-The generated code is automatically formatted using `ruff`.
+The generated code is automatically formatted using `ruff` via the `just` hook.
 
 ## Contributing
 
