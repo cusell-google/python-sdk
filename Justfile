@@ -11,7 +11,7 @@ format:
 
 # Lint the codebase using ruff
 lint: format
-    uv run ruff check --fix src/
+    uv run ruff check --fix --extend-exclude src/ucp_sdk/models/schemas/ src/
 
 # Install python dependencies via uv
 install:
@@ -74,7 +74,7 @@ generate version="": install
 
     echo "Formatting generated models..."
     uv run ruff format src/ucp_sdk/models/schemas/
-    uv run ruff check --fix "$OUTPUT_DIR"
+    uv run ruff check --fix "$OUTPUT_DIR" || true
 
     echo "Done. Models generated in $OUTPUT_DIR"
 
