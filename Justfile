@@ -11,7 +11,7 @@ format:
 
 # Lint the codebase using ruff
 lint: format
-    uv run ruff check --fix --extend-exclude src/ucp_sdk/models/schemas/ src/
+    uv run ruff check --fix src/
 
 # Build the MkDocs documentation site into site/
 docs-build: install
