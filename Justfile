@@ -13,14 +13,6 @@ format:
 lint: format
     uv run ruff check --fix src/
 
-# Build the MkDocs documentation site into site/
-docs-build: install
-    uv run mkdocs build --strict
-
-# Serve the MkDocs documentation locally with hot reloading
-docs-serve: install
-    uv run mkdocs serve
-
 # Install python dependencies via uv
 install:
     uv sync
