@@ -81,3 +81,7 @@ convention = "google"
 combine-as-imports = true
 force-sort-within-sections = true
 case-sensitive = true
+
+[tool.ruff.lint.per-file-ignores]
+# Auto-generated schemas can lack docstrings or exceed line length constraints
+"src/ucp_sdk/models/schemas/**/*.py" = ["D", "E501"]

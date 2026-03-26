@@ -82,7 +82,7 @@ generate version="": install
 
     echo "Formatting generated models..."
     uv run ruff format src/ucp_sdk/models/schemas/
-    uv run ruff check --fix "$OUTPUT_DIR" || true
+    uv run ruff check --fix "$OUTPUT_DIR"
 
     echo "Done. Models generated in $OUTPUT_DIR"
 
