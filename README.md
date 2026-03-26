@@ -34,14 +34,11 @@ Python.
 For now, you can install the SDK using the following commands:
 
 ```bash
-# Create a directory for the SDK
-mkdir sdk
-
 # Clone the repository
-git clone https://github.com/Universal-Commerce-Protocol/python-sdk.git sdk/python
+git clone https://github.com/Universal-Commerce-Protocol/python-sdk.git
 
 # Navigate to the directory
-cd sdk/python
+cd python-sdk
 
 # Install dependencies
 uv sync
@@ -62,8 +59,14 @@ To regenerate the models:
 
 ```bash
 uv sync
-./generate_models.sh
+./generate_models.sh <version>
 ```
+
+Where `<version>` is the version of the UCP specification to use (for example,
+"2026-01-23").
+
+If no version is specified, the `main` branch of the
+[UCP repo](https://github.com/Universal-Commerce-Protocol/ucp) will be used.
 
 The generated code is automatically formatted using `ruff`.
 
