@@ -5,8 +5,8 @@ description = "UCP Python SDK"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
-    { name = "Enric Cusell", email = "cusell@google.com" },
-    { name = "Federico D'Amato", email = "damaz@google.com" }
+    { name = "Federico D'Amato", email = "damaz@google.com" },
+    { name = "Enric Cusell", email = "cusell@google.com" }
 ]
 classifiers = [
     "License :: OSI Approved :: Apache Software License",
