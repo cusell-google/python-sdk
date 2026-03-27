@@ -255,16 +255,22 @@ def preprocess_full_schema(schema, entity_def=None):
     """
     Main entry point for normalizing a single schema file.
     Uses bottom-up iteration to ensure nested structures are flat before parents process them.
+    Repeats until the schema converges.
     """
-    # 1. Discovery: find all dictionaries in the tree
-    nodes = [n for n in iter_nodes(schema) if isinstance(n, dict)]
+    while True:
+        original = json.dumps(schema, sort_keys=True)
+        # 1. Discovery: find all dictionaries in the tree
+        nodes = [n for n in iter_nodes(schema) if isinstance(n, dict)]
 
-    # 2. Execution: process in reverse (approximate bottom-to-top)
-    for node in reversed(nodes):
-        if entity_def:
-            flatten_entity_reference(node, entity_def)
-        merge_all_of_to_node(node, schema)
-        distribute_properties_to_branches(node)
+        # 2. Execution: process in reverse (approximate bottom-to-top)
+        for node in reversed(nodes):
+            if entity_def:
+                flatten_entity_reference(node, entity_def)
+            merge_all_of_to_node(node, schema)
+            distribute_properties_to_branches(node)
+
+        if json.dumps(schema, sort_keys=True) == original:
+            break
 
 
 # --- Variant Generation (Create/Update/Complete) ---
